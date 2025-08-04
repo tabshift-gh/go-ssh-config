@@ -341,100 +341,37 @@ type Config struct {
 	position Position
 }
 
-// %%    A literal `%'.
-// %C    Shorthand for %l%h%p%r.
-// %d    Local user's home directory.
-// %h    The remote hostname.
-// %i    The local user ID.
-// %L    The local hostname.
-// %l    The local hostname, including the domain name.
-// %n    The original remote hostname, as given on the command line.
-// %p    The remote port.
-// %r    The remote username.
-// %u    The local username.
-func (host *Host) percent(alias, val string) string {
-	var (
-		b          bytes.Buffer
-		sawPercent bool
-	)
-	for _, c := range val {
-		if sawPercent {
-			sawPercent = false
-			switch c {
-			case 'd':
-				b.WriteString(homedir())
-			case 'h':
-				b.WriteString(host.tryKV(alias, "HostName"))
-			case 'i':
-				b.WriteString(fmt.Sprintf("%d", os.Getuid()))
-			case 'L':
-				if h, err := os.Hostname(); err != nil {
-					b.WriteString(fmt.Sprintf("%%!L(%v)", err))
-				} else {
-					b.WriteString(h)
-				}
-			case 'n':
-				b.WriteString(alias)
-			case 'p':
-				b.WriteString(host.tryKV(alias, "Port"))
-			case 'r':
-				b.WriteString(host.tryKV(alias, "User"))
-			case 'u':
-				b.WriteString(os.Getenv("USER"))
-			case '%':
-				b.WriteString("%")
-			default:
-				// In the event of a bad format char, fmt returns
-				// the mangled string and no error.
-				// It may be best to follow that practice, as
-				// it gives you a much better idea where things
-				// went wrong.
-				b.WriteString(`%!` + string(c))
-			}
+func (c *Config) getMatchingHosts(alias string) []*Host {
+	matchingHosts := []*Host(nil)
+	for _, host := range c.Hosts {
+		if !host.Matches(alias) {
 			continue
 		}
-		if c != '%' {
-			b.WriteByte(byte(c))
-			continue
-		}
-		sawPercent = true
+		matchingHosts = append(matchingHosts, host)
 	}
-	if sawPercent {
-		b.WriteString("%!(NOVERB)")
-	}
-	return b.String()
+	return matchingHosts
 }
 
-func (host *Host) findKV(alias, key string) (string, error) {
+func getKeyFromNodeForHost(node Node, alias, key string) (string, bool) {
 	lowerKey := strings.ToLower(key)
-	for _, node := range host.Nodes {
-		switch t := node.(type) {
-		case *Empty:
-			continue
-		case *KV:
-			// "keys are case insensitive" per the spec
-			lkey := strings.ToLower(t.Key)
-			if lkey == "match" {
-				panic("can't handle Match directives")
-			}
-			if lkey == lowerKey {
-				return t.Value, nil
-			}
-		case *Include:
-			val := t.Get(alias, key)
-			if val != "" {
-				return val, nil
-			}
-		default:
-			return "", fmt.Errorf("unknown Node type %v", t)
+	switch t := node.(type) {
+	case *Empty:
+		return "", false
+	case *KV:
+		lkey := strings.ToLower(t.Key)
+		if lkey == "match" {
+			panic("can't handle Match directives")
+		}
+		if lkey == lowerKey {
+			return t.Value, true
+		}
+	case *Include:
+		val := t.Get(alias, key)
+		if val != "" {
+			return val, true
 		}
 	}
-	return "", fmt.Errorf("%v has no key %v", alias, key)
-}
-
-func (host *Host) tryKV(alias, key string) string {
-	v, _ := host.findKV(alias, key)
-	return v
+	return "", false
 }
 
 // Get finds the first value in the configuration that matches the alias and
@@ -443,31 +380,11 @@ func (host *Host) tryKV(alias, key string) string {
 //
 // The match for key is case insensitive.
 func (c *Config) Get(alias, key string) (string, error) {
-	lowerKey := strings.ToLower(key)
-	for _, host := range c.Hosts {
-		if !host.Matches(alias) {
-			continue
-		}
+	for _, host := range c.getMatchingHosts(alias) {
 		for _, node := range host.Nodes {
-			switch t := node.(type) {
-			case *Empty:
-				continue
-			case *KV:
-				// "keys are case insensitive" per the spec
-				lkey := strings.ToLower(t.Key)
-				if lkey == "match" {
-					panic("can't handle Match directives")
-				}
-				if lkey == lowerKey {
-					return t.Value, nil
-				}
-			case *Include:
-				val := t.Get(alias, key)
-				if val != "" {
-					return val, nil
-				}
-			default:
-				return "", fmt.Errorf("unknown Node type %v", t)
+			val, found := getKeyFromNodeForHost(node, alias, key)
+			if found {
+				return host.percent(alias, val), nil
 			}
 		}
 	}
@@ -477,32 +394,12 @@ func (c *Config) Get(alias, key string) (string, error) {
 // GetAll returns all values in the configuration that match the alias and
 // contains key, or nil if none are present.
 func (c *Config) GetAll(alias, key string) ([]string, error) {
-	lowerKey := strings.ToLower(key)
 	all := []string(nil)
-	for _, host := range c.Hosts {
-		if !host.Matches(alias) {
-			continue
-		}
+	for _, host := range c.getMatchingHosts(alias) {
 		for _, node := range host.Nodes {
-			switch t := node.(type) {
-			case *Empty:
-				continue
-			case *KV:
-				// "keys are case insensitive" per the spec
-				lkey := strings.ToLower(t.Key)
-				if lkey == "match" {
-					panic("can't handle Match directives")
-				}
-				if lkey == lowerKey {
-					all = append(all, t.Value)
-				}
-			case *Include:
-				val, _ := t.GetAll(alias, key)
-				if len(val) > 0 {
-					all = append(all, val...)
-				}
-			default:
-				return nil, fmt.Errorf("unknown Node type %v", t)
+			val, found := getKeyFromNodeForHost(node, alias, key)
+			if found {
+				all = append(all, host.percent(alias, val))
 			}
 		}
 	}
@@ -665,6 +562,85 @@ func (h *Host) String() string {
 		buf.WriteByte('\n')
 	}
 	return buf.String()
+}
+
+// %%    A literal `%'.
+// %C    Shorthand for %l%h%p%r.
+// %d    Local user's home directory.
+// %h    The remote hostname.
+// %i    The local user ID.
+// %L    The local hostname.
+// %l    The local hostname, including the domain name.
+// %n    The original remote hostname, as given on the command line.
+// %p    The remote port.
+// %r    The remote username.
+// %u    The local username.
+func (host *Host) percent(alias, val string) string {
+	var (
+		b          bytes.Buffer
+		sawPercent bool
+	)
+	for _, c := range val {
+		if sawPercent {
+			sawPercent = false
+			switch c {
+			case 'd':
+				b.WriteString(homedir())
+			case 'h':
+				b.WriteString(host.tryKV(alias, "HostName"))
+			case 'i':
+				b.WriteString(fmt.Sprintf("%d", os.Getuid()))
+			case 'L':
+				if h, err := os.Hostname(); err != nil {
+					b.WriteString(fmt.Sprintf("%%!L(%v)", err))
+				} else {
+					b.WriteString(h)
+				}
+			case 'n':
+				b.WriteString(alias)
+			case 'p':
+				b.WriteString(host.tryKV(alias, "Port"))
+			case 'r':
+				b.WriteString(host.tryKV(alias, "User"))
+			case 'u':
+				b.WriteString(os.Getenv("USER"))
+			case '%':
+				b.WriteString("%")
+			default:
+				// In the event of a bad format char, fmt returns
+				// the mangled string and no error.
+				// It may be best to follow that practice, as
+				// it gives you a much better idea where things
+				// went wrong.
+				b.WriteString(`%!` + string(c))
+			}
+			continue
+		}
+		if c != '%' {
+			b.WriteByte(byte(c))
+			continue
+		}
+		sawPercent = true
+	}
+	if sawPercent {
+		b.WriteString("%!(NOVERB)")
+	}
+	return b.String()
+}
+
+func (host *Host) findKV(alias, key string) (string, error) {
+	for _, node := range host.Nodes {
+		val, found := getKeyFromNodeForHost(node, alias, key)
+		if found {
+			return val, nil
+		}
+	}
+	return "", fmt.Errorf("%v has no key %v", alias, key)
+}
+
+func (host *Host) tryKV(alias, key string) string {
+	v, _ := host.findKV(alias, key)
+	return v
 }
 
 // Node represents a line in a Config.
