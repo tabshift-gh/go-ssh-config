@@ -1,32 +1,3 @@
-// Package ssh_config provides tools for manipulating SSH config files.
-//
-// Importantly, this parser attempts to preserve comments in a given file, so
-// you can manipulate a `ssh_config` file from a program, if your heart desires.
-//
-// The Get() and GetStrict() functions will attempt to read values from
-// $HOME/.ssh/config, falling back to /etc/ssh/ssh_config. The first argument is
-// the host name to match on ("example.com"), and the second argument is the key
-// you want to retrieve ("Port"). The keywords are case insensitive.
-//
-//	port := ssh_config.Get("myhost", "Port")
-//
-// You can also manipulate an SSH config file and then print it or write it back
-// to disk.
-//
-//	f, _ := os.Open(filepath.Join(os.Getenv("HOME"), ".ssh", "config"))
-//	cfg, _ := ssh_config.Decode(f)
-//	for _, host := range cfg.Hosts {
-//		fmt.Println("patterns:", host.Patterns)
-//		for _, node := range host.Nodes {
-//			fmt.Println(node.String())
-//		}
-//	}
-//
-//	// Write the cfg back to disk:
-//	fmt.Println(cfg.String())
-//
-// BUG: the Match directive is currently unsupported; parsing a config with
-// a Match directive will trigger an error.
 package ssh_config
 
 import (

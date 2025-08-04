@@ -1,14 +1,18 @@
-# ssh_config
+# SSH Config for Go
 
-This is a Go parser for `ssh_config` files. Importantly, this parser attempts
-to preserve comments in a given file, so you can manipulate a `ssh_config` file
+> This project was created, after the original author Kevin Burke had no longer
+> enough time to invest into the project maintenance. We thank him very much for
+> his efforts and hope to continue his legacy.
+
+This is a Go parser for `ssh` config files. Importantly, this parser attempts
+to preserve comments in a given file, so you can manipulate a `ssh` config file
 from a program, if your heart desires.
 
 It's designed to be used with the excellent
 [x/crypto/ssh](https://golang.org/x/crypto/ssh) package, which handles SSH
 negotiation but isn't very easy to configure.
 
-The `ssh_config` `Get()` and `GetStrict()` functions will attempt to read values
+The `ssh_config.Get()` and `ssh_config.GetStrict()` functions will attempt to read values
 from `$HOME/.ssh/config` and fall back to `/etc/ssh/ssh_config`. The first
 argument is the host name to match on, and the second argument is the key you
 want to retrieve.
@@ -71,22 +75,4 @@ the `ssh_config` manpage. Unimplemented features should be present in the
 
 Notably, the `Match` directive is currently unsupported.
 
-[issues]: https://github.com/kevinburke/ssh_config/issues
-
-## Errata
-
-This is the second [comment-preserving configuration parser][blog] I've written, after
-[an /etc/hosts parser][hostsfile]. Eventually, I will write one for every Linux
-file format.
-
-[blog]: https://kev.inburke.com/kevin/more-comment-preserving-configuration-parsers/
-[hostsfile]: https://github.com/kevinburke/hostsfile
-
-## Sponsorships
-
-Thank you very much to Tailscale and Indeed for sponsoring development of this
-library. [Sponsors][sponsors] will get their names featured in the README.
-
-You can also reach out about a consulting engagement: https://burke.services
-
-[sponsors]: https://github.com/sponsors/kevinburke
+[issues]: https://github.com/tabshift-gh/go-ssh-config/issues

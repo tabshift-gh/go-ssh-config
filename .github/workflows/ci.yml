@@ -4,21 +4,21 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-    - name: Install Go
-      uses: WillAbides/setup-go-faster@main
-      with:
-        go-version: 1.24.x
-    - uses: actions/checkout@v4
-      with:
-         path: './src/github.com/kevinburke/ssh_config'
-    # staticcheck needs this for GOPATH
-    - run: |
-        echo "GO111MODULE=on" >> $GITHUB_ENV
-        echo "GOPATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
-        echo "PATH=$GITHUB_WORKSPACE/bin:$PATH" >> $GITHUB_ENV
-    - name: Run tests
-      run: make lint
-      working-directory: './src/github.com/kevinburke/ssh_config'
+      - name: Install Go
+        uses: WillAbides/setup-go-faster@main
+        with:
+          go-version: 1.24.x
+      - uses: actions/checkout@v4
+        with:
+          path: './src/github.com/tabshift-gh/go-ssh-config'
+      # staticcheck needs this for GOPATH
+      - run: |
+          echo "GO111MODULE=on" >> $GITHUB_ENV
+          echo "GOPATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+          echo "PATH=$GITHUB_WORKSPACE/bin:$PATH" >> $GITHUB_ENV
+      - name: Run tests
+        run: make lint
+        working-directory: './src/github.com/tabshift-gh/go-ssh-config'
 
   test:
     strategy:
@@ -26,17 +26,17 @@ jobs:
         go-version: [1.17.x, 1.18.x, 1.19.x, 1.20.x, 1.21.x, 1.22.x, 1.23.x, 1.24.x]
     runs-on: ubuntu-latest
     steps:
-    - name: Install Go
-      uses: WillAbides/setup-go-faster@main
-      with:
-        go-version: ${{ matrix.go-version }}
-    - uses: actions/checkout@v4
-      with:
-         path: './src/github.com/kevinburke/ssh_config'
-    - run: |
-        echo "GO111MODULE=off" >> $GITHUB_ENV
-        echo "GOPATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
-        echo "PATH=$GITHUB_WORKSPACE/bin:$PATH" >> $GITHUB_ENV
-    - name: Run tests with race detector on
-      run: make race-test
-      working-directory: './src/github.com/kevinburke/ssh_config'
+      - name: Install Go
+        uses: WillAbides/setup-go-faster@main
+        with:
+          go-version: ${{ matrix.go-version }}
+      - uses: actions/checkout@v4
+        with:
+          path: './src/github.com/tabshift-gh/go-ssh-config'
+      - run: |
+          echo "GO111MODULE=off" >> $GITHUB_ENV
+          echo "GOPATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+          echo "PATH=$GITHUB_WORKSPACE/bin:$PATH" >> $GITHUB_ENV
+      - name: Run tests with race detector on
+        run: make race-test
+        working-directory: './src/github.com/tabshift-gh/go-ssh-config'

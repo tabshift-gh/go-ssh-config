@@ -1,3 +1,3 @@
-module github.com/kevinburke/ssh_config
+module github.com/tabshift-gh/go-ssh-config
 
 go 1.18
