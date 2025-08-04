@@ -352,6 +352,10 @@ func (c *Config) getMatchingHosts(alias string) []*Host {
 	return matchingHosts
 }
 
+func substituteTildeForHomeDirectory(value string) string {
+	return strings.Replace(value, "~", homedir(), 1)
+}
+
 func getKeyFromNodeForHost(node Node, alias, key string) (string, bool) {
 	lowerKey := strings.ToLower(key)
 	switch t := node.(type) {
@@ -363,12 +367,12 @@ func getKeyFromNodeForHost(node Node, alias, key string) (string, bool) {
 			panic("can't handle Match directives")
 		}
 		if lkey == lowerKey {
-			return t.Value, true
+			return substituteTildeForHomeDirectory(t.Value), true
 		}
 	case *Include:
 		val := t.Get(alias, key)
 		if val != "" {
-			return val, true
+			return substituteTildeForHomeDirectory(val), true
 		}
 	}
 	return "", false

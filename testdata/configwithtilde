@@ -1,0 +1,5 @@
+Host specific
+IdentityAgent "~/specific.sock"
+
+Host *
+	IdentityAgent "~/wildcard.sock"

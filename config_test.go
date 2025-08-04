@@ -349,6 +349,34 @@ func TestIncludeString(t *testing.T) {
 	}
 }
 
+func TestResolvesTilde(t *testing.T) {
+	us := &UserSettings{
+		userConfigFinder: testConfigFinder("testdata/configwithtilde"),
+	}
+
+	hosts := []string {
+		"specifc",
+		"unknown",
+	}
+
+	for _, host := range hosts {
+		t.Run(host, func(t *testing.T) {
+			val, err := us.GetStrict(host, "IdentityAgent")
+			if err != nil {
+				t.Errorf("expected nil error, got %v", err)
+			}
+
+			if !strings.Contains(val, homedir()) {
+				t.Errorf("expected value to have replaced ~ with user's home directory path, got %q", val)
+			}
+
+			if strings.Contains(val, "~/") {
+				t.Errorf("expected ~/ to have been replaced with user's home directory path, got %q", val)
+			}
+		})
+	}
+}
+
 var shellIncludeFile = []byte(`
 # This host should not exist, so we can use it for test purposes / it won't
 # interfere with any other configurations.
